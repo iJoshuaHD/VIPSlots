@@ -11,192 +11,202 @@ use pocketmine\event\player\PlayerKickEvent;
 use pocketmine\command\CommandSender;
 use pocketmine\command\Command;
 
-use pocketmine\utils\Format;
 use pocketmine\utils\Config;
 
-
-class VIPSlots extends PluginBase implements Listener{
-
-    public function onEnable(){
-
+class VIPSlots extends PluginBase implements Listener
+{
+    public function onEnable()
+	{
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
-
-		$this->saveDefaultConfig();
-		$this->reloadConfig();
 		
-		$this->createPlayersVIP();
-		$this->vip = $this->getDataFolder(). "vip_players.txt";
+		$this->loadVIPSList();
 		
 		$this->getLogger()->info("VIPSlots Enabled!");
 	}
     
-    public function onDisable(){
+    public function onDisable()
+	{
 		$this->getLogger()->info("VIPSlots Disabled!");
     }
 
-/*****************
-*================*
-*===[ Events ]===*
-*================*
-*****************/
+	/*****************
+	*================*
+	*===[ Events ]===*
+	*================*
+	*****************/
 
-	public function onPlayerKick(PlayerKickEvent $event){
+	public function onPlayerKick(PlayerKickEvent $event)
+	{
+		$p = strtolower($event->getPlayer()->getName());
 		
-			$p = strtolower($event->getPlayer()->getName());
-			$vip_players = $this->vip;
-			if(strpos(file_get_contents($vip_players), $p) !== false) {
-				$event->setCancelled(true);
-			}
-			
+		if($this->vips->exists($p))
+		{
+			$event->setCancelled(true);
+		}
 	}
 
 
-/*****************
-*================*
-*==[ Commands ]==*
-*================*
-*****************/
+	/*****************
+	*================*
+	*==[ Commands ]==*
+	*================*
+	*****************/
 	
-	public function onCommand(CommandSender $p, Command $command, $label, array $args){
-
-		switch($command->getName()){
-		
-			case "vips":
-			
-				if(!isset($args[0])){
-						$p->sendMessage("Usage: /vips <add/remove>");
-				}elseif(count($args) > 3){
-						$p->sendMessage("Usage: /vips <add/remove>");
-				}else{
+	public function onCommand(CommandSender $p, Command $command, $label, array $args)
+	{
+		if($command->getName() == "vips")
+		{
+			if(!isset($args[0]) || count($args) > 2)
+			{
+				$p->sendMessage("Usage: /vips <add/remove> <player>");
 				
-					$cmds = strtolower($args[0]);
-
-					if($cmds === "add"){
+				return true;
+			}
+			
+			switch(strtolower($args[0]))
+			{
+				case "add":
+				
+					if(isset($args[1]))
+					{
+						$who_player = $this->getValidPlayer($args[1]);
 						
-						if(isset($args[1])){
-							$nugget_head = $args[1];
-							$who_player = $this->getValidPlayer($nugget_head);
-							if($who_player instanceof Player){
-								$target = $who_player->getName();
-							}else{
-								$target = $args[1];
-							}
-							if($this->addPlayer($target)){
-								$p->sendMessage("Successfully added '$target' on VIPSlots!");
-							}else{
-								$p->sendMessage("$target is already added on VIPSlots!");
-							}
-						}else{
-							$p->sendMessage("Usage: /vips add <player>");
+						if($who_player instanceof Player)
+						{
+							$target = $who_player->getName();
 						}
-
-					}elseif($cmds === "remove"){
-
-						if(isset($args[1])){
-							$who_player = $this->getValidPlayer($args[1]);
-							if($who_player instanceof Player){
-								$target = $who_player->getName();
-							}else{
-								$target = $args[1];
-							}
-							if($this->removePlayer($target)){
-								$p->sendMessage("Successfully removed '$target' on VIPSlots!");
-							}else{
-								$p->sendMessage("$target is doesnt exist on VIPSlots!");
-							}
-						}else{
-							$p->sendMessage("Usage: /vips remove <player>");
+						else
+						{
+							$target = $args[1];
 						}
 						
-					}else{
-						$p->sendMessage("Usage: /vips <add/remove>");
+						if($this->addPlayer($target))
+						{
+							$p->sendMessage("Successfully added '$target' on VIPSlots!");
+						}
+						else
+						{
+							$p->sendMessage("$target is already added on VIPSlots!");
+						}
+					}
+					else
+					{
+						$p->sendMessage("Usage: /vips add <player>");
+					}
+				
+					break;
+					
+				case "remove":
+				
+					if(isset($args[1]))
+					{
+						$who_player = $this->getValidPlayer($args[1]);
+						
+						if($who_player instanceof Player)
+						{
+							$target = $who_player->getName();
+						}
+						else
+						{
+							$target = $args[1];
+						}
+						
+						if($this->removePlayer($target))
+						{
+							$p->sendMessage("Successfully removed '$target' on VIPSlots!");
+						}
+						else
+						{
+							$p->sendMessage("$target doesn't exist on VIPSlots!");
+						}
+					}
+					else
+					{
+						$p->sendMessage("Usage: /vips remove <player>");
 					}
 					
-				}
+					break;
 				
-			break;
-		
-		}
-	
-	}
-	
-/*****************
-*================*
-*==[ Non-APIs ]==*
-*================*
-*****************/
-	
-	public function createPlayersVIP(){
-		
-		$fileLocation = $this->getDataFolder() . "vip_players.txt";
-		if(!file_exists($fileLocation)){
-			fopen($fileLocation,"w");
-		}
-
-	}
-	
-	public function addPlayer($player){
-		$target = $this->getValidPlayer($player);
-		if($target instanceof Player){
-			$p = strtolower($target->getName());
-		}else{
-			$p = strtolower($player);
-		}
-		$vip_players = $this->vip;
-		if(strpos(file_get_contents($vip_players), $p) !== false) {
-			return false;
-		}else{
-			file_put_contents($vip_players, $p . PHP_EOL, FILE_APPEND);
+				default:
+				
+					$p->sendMessage("Usage: /vips <add/remove>");
+					
+					break;
+					
+			}
+			
 			return true;
 		}
 	}
 	
-	public function removePlayer($player){
+	/*****************
+	*================*
+	*==[ Non-APIs ]==*
+	*================*
+	*****************/
 	
-		$target = $this->getValidPlayer($player);
-		$vip_players = $this->vip;
+	private function loadVIPSList()
+	{
+		@mkdir($this->getDataFolder(), 0777, true);
 		
-		if($target instanceof Player){
+		$this->vips = new Config($this->getDataFolder() . "vip_players.txt", Config::ENUM, array(
+		));
+	}
+	
+	private function getValidPlayer($target)
+	{
+		$player = $this->getServer()->getPlayer($target);
+		
+		return $player instanceof Player ? $player : $this->getServer()->getOfflinePlayer($target);
+	}
+	
+	/*****************
+	*================*
+	*==[   APIs   ]==*
+	*================*
+	*****************/
+	
+	public function addPlayer($player)
+	{
+		$target = $this->getValidPlayer($player);
+		
+		if($target instanceof Player)
+		{
 			$p = strtolower($target->getName());
-		}else{
+		}
+		else
+		{
 			$p = strtolower($player);
 		}
 		
-		if(strpos(file_get_contents($vip_players),$p) !== false) {
-										
-			$DELETE = $p;
-			$data = file($vip_players);
-			$out = array();
+		if($this->vips->exists($p)) return false;
+		
+		$this->vips->set($p, true);
+		
+		$this->vips->save();
 			
-			foreach($data as $line){
-				if(trim($line) != $DELETE) {
-					$out[] = $line;
-				}
-			}
-			
-			$fp = fopen($vip_players, "w+");
-											 
-			flock($fp, LOCK_EX);
-			
-			foreach($out as $line) {
-				fwrite($fp, $line);
-			}
-			
-			flock($fp, LOCK_UN);
-			
-			fclose($fp);
-			
-			return true;
-											 
-		}else{
-			return false;
+		return true;
+	}
+	
+	public function removePlayer($player)
+	{
+		$target = $this->getValidPlayer($player);
+		
+		if($target instanceof Player)
+		{
+			$p = strtolower($target->getName());
+		}
+		else
+		{
+			$p = strtolower($player);
 		}
 	
+		if(!$this->vips->exists($p)) return false;
+		
+		$this->vips->remove($p);
+		
+		$this->vips->save();
+		
+		return true;
 	}
-	
-	public function getValidPlayer($target_p){
-		$player = $this->getServer()->getPlayer($target_p);
-		return $player instanceof Player ? $player : $this->getServer()->getOfflinePlayer($target_p);
-	}
-
 }
