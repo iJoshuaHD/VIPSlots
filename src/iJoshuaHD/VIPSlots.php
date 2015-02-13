@@ -4,6 +4,7 @@ namespace iJoshuaHD;
 
 use pocketmine\event\Listener;
 
+use pocketmine\Player;
 use pocketmine\plugin\PluginBase;
 
 use pocketmine\event\player\PlayerKickEvent;
@@ -14,6 +15,8 @@ use pocketmine\command\Command;
 use pocketmine\utils\Config;
 
 class VIPSlots extends PluginBase implements Listener{
+	/** @var Config */
+	private $vips;
 
     public function onEnable(){
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
@@ -37,7 +40,6 @@ class VIPSlots extends PluginBase implements Listener{
 		if($this->vips->exists(strtolower($event->getPlayer()->getName())) or ($event->getPlayer()->hasPermission("vips.*") or $event->getPlayer()->hasPermission("vips.slot")) and $event->getReason() === "server full"){
 			$event->setCancelled(true);
 		}
-		
 	}
 
 
@@ -109,18 +111,18 @@ class VIPSlots extends PluginBase implements Listener{
 					break;
 					
 				case "list":
-				
-					$file = fopen($this->getDataFolder() . "vip_players.txt", "r");
-					$i = 0;
-					while (!feof($file)) {
-						$vips[] = fgets($file);
-					}
-					fclose($file);
 
-					$p->sendMessage("-==[ VIPSlots List ]==-");
-					foreach ($vips as $vip){
-						$p->sendMessage(" - " . $vip);
+					$vips = $this->vips->getAll();
+
+					if(count($vips) < 1){
+						$m = " - There are no players in the VIPSlots list -";
+					}else{
+						$m = "-==[ VIPSlots List ]==-\n";
+						foreach ($vips as $k => $v){
+							$m .= " - " . $k;
+						}
 					}
+					$p->sendMessage($m);
 				
 					break;
 					
@@ -143,9 +145,10 @@ class VIPSlots extends PluginBase implements Listener{
 	*****************/
 	
 	private function loadVIPSList(){
-		@mkdir($this->getDataFolder(), 0777, true);
-		$this->vips = new Config($this->getDataFolder() . "vip_players.txt", Config::ENUM, array(
-		));
+		if(!is_dir($this->getDataFolder())){
+			mkdir($this->getDataFolder());
+		}
+		$this->vips = new Config($this->getDataFolder() . "vip_players.txt", Config::ENUM);
 	}
 	
 	private function getValidPlayer($target){
